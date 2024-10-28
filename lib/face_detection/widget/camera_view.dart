@@ -1,22 +1,27 @@
+// ignore_for_file: no_logic_in_create_state
+
 import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
 import 'package:google_mlkit_commons/google_mlkit_commons.dart';
+import 'package:teladan/face_detection/utils/recog.dart';
 
 class CameraView extends StatefulWidget {
-  CameraView(
-      {Key? key,
-      required this.title,
-      required this.customPaint,
-      required this.onImage,
-      this.onCameraFeedReady,
-      this.onCameraLensDirectionChanged,
-      this.initialCameraLensDirection = CameraLensDirection.back,
-      this.isRegister = false})
-      : super(key: key);
+  const CameraView({
+    Key? key,
+    required this.title,
+    required this.customPaint,
+    required this.onImage,
+    this.onCameraFeedReady,
+    this.onCameraLensDirectionChanged,
+    this.initialCameraLensDirection = CameraLensDirection.back,
+    this.isRegister = false,
+    required this.type,
+    this.onClockInOut,
+    this.onRegister,
+  }) : super(key: key);
 
   final CustomPaint? customPaint;
   final String title;
@@ -25,13 +30,18 @@ class CameraView extends StatefulWidget {
   final Function(CameraLensDirection direction)? onCameraLensDirectionChanged;
   final CameraLensDirection initialCameraLensDirection;
   final bool isRegister;
+  final String type;
+  final Function(InputImage inputImage)? onRegister;
+  final Function(BuildContext context, InputImage inputImage)? onClockInOut;
 
   @override
-  State<CameraView> createState() => _CameraViewState(title: title);
+  State<CameraView> createState() =>
+      _CameraViewState(title: title, isRegister: isRegister);
 }
 
 class _CameraViewState extends State<CameraView> {
-  _CameraViewState({required this.title});
+  _CameraViewState({required this.title, required this.isRegister});
+  InputImage? _inputImage;
   final String title;
 
   static List<CameraDescription> _cameras = [];
@@ -44,6 +54,7 @@ class _CameraViewState extends State<CameraView> {
   double _maxAvailableExposureOffset = 0.0;
   double _currentExposureOffset = 0.0;
   bool _changingCameraLens = false;
+  final bool isRegister;
 
   final TextEditingController _label = TextEditingController(text: '');
 
@@ -101,14 +112,42 @@ class _CameraViewState extends State<CameraView> {
           ),
           _backButton(),
           _switchLiveCameraToggle(),
-          _detectionViewModeToggle(),
-          _zoomControl(),
+          if (widget.isRegister) _zoomControl(),
           _exposureControl(),
           if (widget.isRegister) _addButton(),
+          if (!widget.isRegister) _sendButton()
         ],
       ),
     );
   }
+
+  Widget _sendButton() => Positioned(
+        bottom: 8,
+        child: SizedBox(
+          height: 50.0,
+          width: 200,
+          child: FloatingActionButton(
+            heroTag: Object(),
+            onPressed: () async {
+              print('onClockInOut called');
+              widget.onClockInOut!(context, _inputImage!);
+            },
+            backgroundColor: Colors.red,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(widget.type),
+                const SizedBox(width: 8),
+                const Icon(
+                  Icons.send,
+                  size: 25,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
 
   Widget _addButton() => Positioned(
         bottom: 8,
@@ -119,55 +158,12 @@ class _CameraViewState extends State<CameraView> {
           child: FloatingActionButton(
             heroTag: Object(),
             onPressed: () => {
-              showDialog(
-                context: context,
-                builder: (context) {
-                  return AlertDialog(
-                    content: Column(children: [
-                      TextField(
-                        controller: _label,
-                      ),
-                      ElevatedButton(
-                          onPressed: () async {
-                            // Navigator.pop(context);
-                            // await Future.delayed(
-                            //     const Duration(milliseconds: 400));
-                            // data[_label.text] = e1;
-                            // jsonFile.writeAsStringSync(json.encode(data));
-                            // if (_camera != null) {
-                            //   await _camera!.stopImageStream();
-                            //   await Future.delayed(
-                            //       const Duration(milliseconds: 400));
-                            //   await _camera!.dispose();
-                            //   await Future.delayed(
-                            //       const Duration(milliseconds: 400));
-                            //   _camera = null;
-                            // }
-                            Navigator.pop(context);
-
-                            showDialog(
-                              context: context,
-                              builder: (context) {
-                                return AlertDialog(
-                                  content: const Text('Data berhasil disimpan'),
-                                  actions: [
-                                    ElevatedButton(
-                                        onPressed: () {
-                                          Navigator.pop(context);
-                                        },
-                                        child: const Text('OK'))
-                                  ],
-                                );
-                              },
-                            );
-                          },
-                          child: const Text('Simpan'))
-                    ]),
-                  );
-                },
-              )
+              if (widget.onRegister != null && _inputImage != null)
+                {
+                  widget.onRegister!(_inputImage!),
+                }
             },
-            backgroundColor: Colors.black54,
+            backgroundColor: Colors.red,
             child: const Icon(
               Icons.add,
               size: 25,
@@ -199,15 +195,6 @@ class _CameraViewState extends State<CameraView> {
         ),
       );
 
-  Widget _detectionViewModeToggle() => const Positioned(
-        bottom: 8,
-        left: 8,
-        child: SizedBox(
-          height: 50.0,
-          width: 50.0,
-        ),
-      );
-
   Widget _switchLiveCameraToggle() => Positioned(
         bottom: 8,
         right: 8,
@@ -217,7 +204,7 @@ class _CameraViewState extends State<CameraView> {
           child: FloatingActionButton(
             heroTag: Object(),
             onPressed: _switchLiveCamera,
-            backgroundColor: Colors.black54,
+            backgroundColor: Colors.blue,
             child: Icon(
               Platform.isIOS
                   ? Icons.flip_camera_ios_outlined
@@ -386,6 +373,8 @@ class _CameraViewState extends State<CameraView> {
     final inputImage = _inputImageFromCameraImage(image);
     if (inputImage == null) return;
     widget.onImage(inputImage);
+
+    _inputImage = inputImage;
   }
 
   final _orientations = {

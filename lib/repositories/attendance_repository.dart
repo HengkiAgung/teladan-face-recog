@@ -2,11 +2,15 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:location/location.dart';
 
+import 'package:path/path.dart' as path;
 import 'package:http/http.dart' as http;
+import 'package:image/image.dart' as imglib;
+import 'package:http_parser/http_parser.dart';
 import 'package:teladan/components/modal_bottom_sheet_component.dart';
 
 import '../models/Attendance.dart';
@@ -104,74 +108,63 @@ class AttendanceRepository {
     return false;
   }
 
-  Future<bool> checkIn(BuildContext context, String token) async {
+  Future<bool> checkIn({
+    required BuildContext context,
+    required String token,
+    required imglib.Image image,
+    required String latitude,
+    required String longitude,
+  }) async {
     try {
-      String latitude = "0";
-      String longitude = "0";
+      Navigator.pop(context);
+
+      // Encode the resized image back to JPEG
+      Uint8List encodedImage = Uint8List.fromList(imglib.encodeJpg(image));
+
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$_baseUrl/cmt-attendance/attend/check-in'),
+      );
+
+      var imageFile = http.MultipartFile.fromBytes(
+        'file', // The key you'll use in the backend
+        encodedImage,
+        filename: path.basename("clock-in.jpg"), // Filename
+        contentType:
+            MediaType('image', 'jpg'), // Content type (adjust as needed)
+      );
 
       ModalBottomSheetComponent()
-          .loadingIndicator(context, "Sedang memeriksa lokasimu...");
+          .loadingIndicator(context, "Sedang mengirim data...");
 
-      await getLocation().then((value) {
-        latitude = '${value.latitude}';
-        longitude = '${value.longitude}';
-        // latitude = '-1.249637';
-        // longitude = '116.877503';
-      });
+      request.files.add(imageFile);
 
-      bool validate =
-          await validateLocation(context, token, latitude, longitude);
+      request.headers['Accept'] = 'application/json';
+      request.headers['Content-Type'] = 'multipart/form-data';
+      request.headers['Authorization'] = 'Bearer $token';
+      request.fields['latitude'] = latitude;
+      request.fields['longitude'] = longitude;
 
-      if (validate) {
+      try {
+        final response = await request.send();
+
         Navigator.pop(context);
-        var request = http.MultipartRequest(
-          'POST',
-          Uri.parse('$_baseUrl/cmt-attendance/attend/check-in'),
-        );
-        var data = await getImage();
-        if (data == null) {
-          throw 'Silahkan ambil ulang foto untuk melakukan check in';
-        }
+        if (int.parse(response.statusCode.toString()[0]) == 2) {
+          return true;
+        } else {
+          var result = await response.stream.bytesToString();
+          String message = result.split('"message":"')[1].split('"}')[0];
 
-        var imageFile = await http.MultipartFile.fromPath(
-          'file',
-          data.path,
-          filename: "absen.jpg",
-        );
-        ModalBottomSheetComponent()
-            .loadingIndicator(context, "Sedang mengirim data...");
-
-        request.files.add(imageFile);
-
-        request.headers['Accept'] = 'application/json';
-        request.headers['Content-Type'] = 'multipart/form-data';
-        request.headers['Authorization'] = 'Bearer $token';
-        request.fields['latitude'] = latitude;
-        request.fields['longitude'] = longitude;
-
-        try {
-          final response = await request.send();
-
-          Navigator.pop(context);
-          if (int.parse(response.statusCode.toString()[0]) == 2) {
-            return true;
-          } else {
-            var result = await response.stream.bytesToString();
-            String message = result.split('"message":"')[1].split('"}')[0];
-
-            ModalBottomSheetComponent().errorIndicator(context, message);
-
-            return false;
-          }
-        } catch (e) {
-          ModalBottomSheetComponent()
-              .errorIndicator(context, "Error sending request: $e");
+          ModalBottomSheetComponent().errorIndicator(context, message);
 
           return false;
         }
-      }
+      } catch (e) {
+        ModalBottomSheetComponent()
+            .errorIndicator(context, "Error sending request: $e");
 
-      return false;
+        return false;
+      }
     } catch (e) {
       ModalBottomSheetComponent().errorIndicator(context, e.toString());
 
@@ -179,76 +172,63 @@ class AttendanceRepository {
     }
   }
 
-  Future<bool> checkOut(BuildContext context, String token) async {
+  Future<bool> checkOut({
+    required BuildContext context,
+    required String token,
+    required imglib.Image image,
+    required String latitude,
+    required String longitude,
+  }) async {
     try {
-      String latitude = "0";
-      String longitude = "0";
+      Navigator.pop(context);
+
+      // Encode the resized image back to JPEG
+      Uint8List encodedImage = Uint8List.fromList(imglib.encodeJpg(image));
+
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$_baseUrl/cmt-attendance/attend/check-out'),
+      );
+
+      var imageFile = http.MultipartFile.fromBytes(
+        'file', // The key you'll use in the backend
+        encodedImage,
+        filename: path.basename("clock-out.jpg"), // Filename
+        contentType:
+            MediaType('image', 'jpg'), // Content type (adjust as needed)
+      );
 
       ModalBottomSheetComponent()
-          .loadingIndicator(context, "Sedang memeriksa lokasimu...");
+          .loadingIndicator(context, "Sedang mengirim data...");
 
-      await getLocation().then((value) {
-        latitude = '${value.latitude}';
-        longitude = '${value.longitude}';
-        // latitude = '-1.249637';
-        // longitude = '116.877503';
-      });
+      request.files.add(imageFile);
 
-      bool validate =
-          await validateLocation(context, token, latitude, longitude);
+      request.headers['Accept'] = 'application/json';
+      request.headers['Content-Type'] = 'multipart/form-data';
+      request.headers['Authorization'] = 'Bearer $token';
+      request.fields['latitude'] = latitude;
+      request.fields['longitude'] = longitude;
 
-      if (validate) {
+      try {
+        final response = await request.send();
+
         Navigator.pop(context);
+        if (int.parse(response.statusCode.toString()[0]) == 2) {
+          return true;
+        } else {
+          var result = await response.stream.bytesToString();
+          String message = result.split('"message":"')[1].split('"}')[0];
 
-        var request = http.MultipartRequest(
-          'POST',
-          Uri.parse('$_baseUrl/cmt-attendance/attend/check-out'),
-        );
-        var data = await getImage();
-        if (data == null) {
-          throw 'Silahkan ambil ulang foto untuk melakukan check out';
-        }
-
-        var imageFile = await http.MultipartFile.fromPath(
-          'file',
-          data.path,
-          filename: "absen.jpg",
-        );
-
-        ModalBottomSheetComponent()
-            .loadingIndicator(context, "Sedang mengirim data...");
-
-        request.files.add(imageFile);
-
-        request.headers['Accept'] = 'application/json';
-        request.headers['Content-Type'] = 'multipart/form-data';
-        request.headers['Authorization'] = 'Bearer $token';
-        request.fields['latitude'] = latitude;
-        request.fields['longitude'] = longitude;
-
-        try {
-          final response = await request.send();
-
-          Navigator.pop(context);
-          if (int.parse(response.statusCode.toString()[0]) == 2) {
-            return true;
-          } else {
-            var result = await response.stream.bytesToString();
-            String message = result.split('"message":"')[1].split('"}')[0];
-
-            ModalBottomSheetComponent().errorIndicator(context, message);
-
-            return false;
-          }
-        } catch (e) {
-          ModalBottomSheetComponent()
-              .errorIndicator(context, "Error sending request: $e");
+          ModalBottomSheetComponent().errorIndicator(context, message);
 
           return false;
         }
-      }
+      } catch (e) {
+        ModalBottomSheetComponent()
+            .errorIndicator(context, "Error sending request: $e");
 
-      return false;
+        return false;
+      }
     } catch (e) {
       ModalBottomSheetComponent().errorIndicator(context, e.toString());
 
@@ -257,15 +237,18 @@ class AttendanceRepository {
   }
 
   Future<List<Attendance>> getHistoryAttendance(
-      {String page = "1", required String token, int month = 0, int year = 0}) async {
-
+      {String page = "1",
+      required String token,
+      int month = 0,
+      int year = 0}) async {
     if (month == 0) {
       DateTime now = DateTime.now();
       month = now.month;
     }
 
     final response = await http.get(
-      Uri.parse('$_baseUrl/cmt-attendance/history?page=$page&filterMonth=$month&filterYear=$year&itemCount=100'),
+      Uri.parse(
+          '$_baseUrl/cmt-attendance/history?page=$page&filterMonth=$month&filterYear=$year&itemCount=100'),
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -287,8 +270,7 @@ class AttendanceRepository {
   }
 
   Future<Summaries> getSummaries(
-    String? startDate, String? endDate, token) async {
-
+      String? startDate, String? endDate, token) async {
     DateTime now = DateTime.now();
     int month = now.day > 27 ? now.month : now.month - 1;
     String date = "${now.year}-$month-27";

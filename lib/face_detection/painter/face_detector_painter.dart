@@ -7,7 +7,6 @@ import 'package:image/image.dart' as imglib;
 import 'package:tflite_flutter/tflite_flutter.dart';
 
 import 'coordinates_translator.dart';
-import 'package:teladan/face_detection/utils/recog.dart';
 
 class FaceDetectorPainter extends CustomPainter {
   FaceDetectorPainter(
@@ -15,18 +14,12 @@ class FaceDetectorPainter extends CustomPainter {
     this.imageSize,
     this.rotation,
     this.cameraLensDirection,
-    this.callBack,
-    this.interpreter,
-    this.image,
   );
 
   final List<Face> faces;
   final Size imageSize;
   final InputImageRotation rotation;
   final CameraLensDirection cameraLensDirection;
-  final void Function(String) callBack;
-  Interpreter? interpreter;
-  imglib.Image? image;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -68,23 +61,6 @@ class FaceDetectorPainter extends CustomPainter {
         rotation,
         cameraLensDirection,
       );
-
-      // i can get face on this loop
-      // using model facenet
-      print("interpreter: $interpreter");
-      print("image: $image");
-      if (interpreter != null && image != null) {
-        imglib.Image croppedImage = imglib.copyCrop(
-          image!,
-          x: face.boundingBox.left.round(),
-          y: face.boundingBox.top.round(),
-          width: face.boundingBox.width.round(),
-          height: face.boundingBox.height.round(),
-        );
-        print("sebelum resize crop");
-        croppedImage = imglib.copyResizeCropSquare(croppedImage, size: 112);
-        _recog(croppedImage);
-      }
 
       canvas.drawRect(
         Rect.fromLTRB(left, top, right, bottom),
@@ -151,21 +127,6 @@ class FaceDetectorPainter extends CustomPainter {
         paintLandmark(type);
       }
     }
-  }
-
-  // void _recog(imglib.Image img) async {
-  //   List input = imageToByteListFloat32(img, 112, 128, 128);
-  //   input = input.reshape([1, 112, 112, 3]);
-  //   String res = await compare(input);
-  //   callBack(res);
-  // }
-
-  void _recog(imglib.Image croppedImage) async {
-    String user = await recog(interpreter!, croppedImage);
-
-    print("user: $user");
-
-    callBack(user);
   }
 
   @override

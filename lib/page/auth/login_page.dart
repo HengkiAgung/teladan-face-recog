@@ -1,6 +1,7 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:teladan/page/auth/register_face_page.dart';
 import 'package:teladan/page/auth/reset_password_page.dart';
 import 'package:teladan/page/main_page.dart';
 import 'package:flutter/material.dart';
@@ -67,23 +68,11 @@ class _LoginPageState extends State<LoginPage> {
                       context, _emailController.text, _passwordController.text);
 
                   if (dataLogin[0]) {
-                    context.read<UserBloc>().add(GetUser());
-
-                    if (dataLogin[1] == 1 || dataLogin[1] == "1") {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute<void>(
-                          builder: (BuildContext context) =>
-                              ResetPasswordPage(),
-                        ),
-                      );
-
-                      return;
-                    }
-                    Navigator.pushReplacement<void, void>(
+                    Navigator.pushReplacement(
                       context,
                       MaterialPageRoute<void>(
-                        builder: (BuildContext context) => MainPage(index: 0),
+                        builder: (BuildContext context) =>
+                            RegisterFacePage(dataLogin: dataLogin),
                       ),
                     );
                   }

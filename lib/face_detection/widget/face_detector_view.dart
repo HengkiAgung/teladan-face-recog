@@ -1,14 +1,27 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+import 'package:teladan/components/modal_bottom_sheet_component.dart';
 import 'package:teladan/face_detection/painter/face_detector_painter.dart';
 import 'package:teladan/face_detection/utils/convertImage.dart';
 import 'package:teladan/face_detection/utils/model.dart';
+import 'package:teladan/face_detection/utils/recog.dart';
+import 'package:teladan/face_detection/widget/camera_view.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
-
-import 'detector_view.dart';
+import 'package:image/image.dart' as imglib;
 
 class FaceDetectorView extends StatefulWidget {
+  final String type;
+  final Function(InputImage inputImage, String type) onClockInOut;
+
+  FaceDetectorView({
+    Key? key,
+    required this.type,
+    required this.onClockInOut,
+  }) : super(key: key);
+
   @override
   State<FaceDetectorView> createState() => _FaceDetectorViewState();
 }
@@ -29,6 +42,8 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
   Interpreter? interpreter;
 
   Widget? detectorView;
+
+  bool _isRecognized = false;
 
   @override
   void initState() {
@@ -53,22 +68,18 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
 
   @override
   Widget build(BuildContext context) {
-    setState(() {
-      detectorView = DetectorView(
-        title: 'Face Detector $_faceData',
-        customPaint: _customPaint,
-        text: _text,
-        onImage: _processImage,
-        initialCameraLensDirection: _cameraLensDirection,
-        onCameraLensDirectionChanged: (value) => _cameraLensDirection = value,
-      );
-    });
-
-    return detectorView!;
+    return CameraView(
+      type: widget.type,
+      title: 'Face Detector',
+      customPaint: _customPaint,
+      onImage: _processImage,
+      initialCameraLensDirection: _cameraLensDirection,
+      onCameraLensDirectionChanged: (value) => _cameraLensDirection = value,
+      onClockInOut: onClockInOut,
+    );
   }
 
   Future<void> _processImage(InputImage inputImage) async {
-    print("didalam process image");
     if (!_canProcess) return;
     if (_isBusy) return;
     _isBusy = true;
@@ -76,22 +87,20 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
       _text = '';
     });
     final faces = await _faceDetector.processImage(inputImage);
-    print("face: $faces");
     if (inputImage.metadata?.size != null &&
         inputImage.metadata?.rotation != null) {
       // convert InputImage to Image
       var image = decodeYUV420SP(inputImage);
-      print("image: $image");
 
       final painter = FaceDetectorPainter(
         faces,
         inputImage.metadata!.size,
         inputImage.metadata!.rotation,
         _cameraLensDirection,
-        callBack,
-        interpreter,
-        image,
       );
+
+      recognizeFace(image, faces);
+
       _customPaint = CustomPaint(painter: painter);
     } else {
       String text = 'Faces found: ${faces.length}\n\n';
@@ -108,21 +117,43 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
     }
   }
 
-  void callBack(String faceData) {
-    print("faceData: $faceData");
-    setState(() {
-      _faceData = faceData;
-
-      detectorView = DetectorView(
-        title: 'Face Detector $_faceData',
-        customPaint: _customPaint,
-        text: _text,
-        onImage: _processImage,
-        initialCameraLensDirection: _cameraLensDirection,
-        onCameraLensDirectionChanged: (value) => _cameraLensDirection = value,
+  Future onClockInOut(BuildContext context, InputImage inputImage) async {
+    print('proses: clock in');
+    if (_isRecognized == false) {
+      ModalBottomSheetComponent().errorIndicator(
+        context,
+        'Wajah tidak dikenali',
       );
-    });
+      return;
+    }
 
-    print("_faceData: $_faceData");
+    widget.onClockInOut(inputImage, widget.type);
+  }
+
+  Future<bool> recognizeFace(imglib.Image? image, List<Face> faces) async {
+    // i can get face on this loop
+    // using model facenet
+    if (interpreter != null && image != null) {
+      for (final face in faces) {
+        imglib.Image croppedImage = imglib.copyCrop(
+          image,
+          x: face.boundingBox.left.round(),
+          y: face.boundingBox.top.round(),
+          width: face.boundingBox.width.round(),
+          height: face.boundingBox.height.round(),
+        );
+
+        croppedImage = imglib.copyResizeCropSquare(croppedImage, size: 112);
+        String result = await recog(interpreter!, croppedImage);
+
+        print('muka: $result');
+
+        if (result == 'USER') {
+          _isRecognized = true;
+        }
+      }
+    }
+
+    return false;
   }
 }

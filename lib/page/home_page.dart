@@ -3,13 +3,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:intl/intl.dart';
 import 'package:locale_plus/locale_plus.dart';
 import 'package:teladan/bloc/notification_badge/notification_badge_bloc.dart';
+import 'package:teladan/components/modal_bottom_sheet_component.dart';
+import 'package:teladan/face_detection/utils/convertImage.dart';
 import 'package:teladan/face_detection/widget/face_detector_view.dart';
 import 'package:teladan/models/Summaries.dart';
-import 'package:teladan/page/auth/register_face_page.dart';
+import 'package:teladan/utils/auth.dart';
 import 'package:teladan/utils/helper.dart';
+import 'package:image/image.dart' as imglib;
 
 import '../bloc/attendance_log/attendance_log_bloc.dart';
 import '../bloc/attendance_today/attendance_today_bloc.dart';
@@ -29,6 +33,8 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int gmt = 0;
+  String latitude = "0";
+  String longitude = "0";
 
   getGMT() async {
     final secondsFromGMT = await LocalePlus().getSecondsFromGMT();
@@ -101,24 +107,13 @@ class _HomePageState extends State<HomePage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      const RegisterFacePage(),
-                                ),
-                              );
-                            },
-                            child: Text(
-                              "Selamat $time",
-                              style: GoogleFonts.poppins(
-                                textStyle: const TextStyle(
-                                    fontWeight: FontWeight.bold),
-                                fontSize: 16,
-                                color: Colors.white,
-                              ),
+                          Text(
+                            "Selamat $time",
+                            style: GoogleFonts.poppins(
+                              textStyle:
+                                  const TextStyle(fontWeight: FontWeight.bold),
+                              fontSize: 16,
+                              color: Colors.white,
                             ),
                           ),
                           BlocBuilder<UserBloc, UserState>(
@@ -195,21 +190,23 @@ class _HomePageState extends State<HomePage> {
                                             return TextButton(
                                               onPressed: () async {
                                                 if (attendance.check_in == "") {
-                                                  bool attend =
-                                                      await AttendanceRepository()
-                                                          .checkIn(
-                                                              context, token);
+                                                  bool validate =
+                                                      await validateLocation(
+                                                          token);
 
-                                                  if (attend) {
-                                                    context
-                                                        .read<
-                                                            AttendanceTodayBloc>()
-                                                        .add(
-                                                            GetAttendanceToday());
-                                                    context
-                                                        .read<SummariesBloc>()
-                                                        .add(
-                                                            GetAttendanceSummaries());
+                                                  if (validate) {
+                                                    Navigator.pop(context);
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (context) =>
+                                                            FaceDetectorView(
+                                                          type: "Check In",
+                                                          onClockInOut:
+                                                              onClockInOut,
+                                                        ),
+                                                      ),
+                                                    );
                                                   }
                                                 }
                                               },
@@ -253,21 +250,23 @@ class _HomePageState extends State<HomePage> {
                                               onPressed: () async {
                                                 if (attendance.check_out ==
                                                     "") {
-                                                  bool attend =
-                                                      await AttendanceRepository()
-                                                          .checkOut(
-                                                              context, token);
+                                                  bool validate =
+                                                      await validateLocation(
+                                                          token);
 
-                                                  if (attend) {
-                                                    context
-                                                        .read<
-                                                            AttendanceTodayBloc>()
-                                                        .add(
-                                                            GetAttendanceToday());
-                                                    context
-                                                        .read<SummariesBloc>()
-                                                        .add(
-                                                            GetAttendanceSummaries());
+                                                  if (validate) {
+                                                    Navigator.pop(context);
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (context) =>
+                                                            FaceDetectorView(
+                                                          type: "Check Out",
+                                                          onClockInOut:
+                                                              onClockInOut,
+                                                        ),
+                                                      ),
+                                                    );
                                                   }
                                                 }
                                               },
@@ -634,5 +633,64 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     );
+  }
+
+  Future<bool> validateLocation(String token) async {
+    ModalBottomSheetComponent()
+        .loadingIndicator(context, "Sedang memeriksa lokasimu...");
+
+    await AttendanceRepository().getLocation().then((value) {
+      latitude = '${value.latitude}';
+      longitude = '${value.longitude}';
+      // latitude = '-1.249637';
+      // longitude = '116.877503';
+    });
+
+    bool validate = await AttendanceRepository()
+        .validateLocation(context, token, latitude, longitude);
+
+    return validate;
+  }
+
+  Future<void> onClockInOut(InputImage inputImage, String type) async {
+    String token = await Auth().getToken();
+    imglib.Image compresedImage = compressImage(inputImage);
+    bool attend = false;
+
+    if (type == 'Check In') {
+      attend = await AttendanceRepository().checkIn(
+        context: context,
+        image: compresedImage,
+        latitude: latitude,
+        longitude: longitude,
+        token: token,
+      );
+    } else {
+      attend = await AttendanceRepository().checkOut(
+        context: context,
+        image: compresedImage,
+        latitude: latitude,
+        longitude: longitude,
+        token: token,
+      );
+    }
+
+    if (attend) {
+      context.read<AttendanceTodayBloc>().add(GetAttendanceToday());
+      context.read<SummariesBloc>().add(GetAttendanceSummaries());
+    }
+  }
+
+  imglib.Image compressImage(InputImage imageData) {
+    imglib.Image image = decodeYUV420SP(imageData);
+
+    // Resize the image to 1/4 of the original size
+    imglib.Image resizedImage = imglib.copyResize(
+      image,
+      width: (image.width / 2).round(), // Resize to 1/2 for both dimensions
+      height: (image.height / 2).round(),
+    );
+
+    return resizedImage;
   }
 }

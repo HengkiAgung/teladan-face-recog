@@ -17,7 +17,7 @@ Future<bool> saveEmb(String label, Interpreter interpreter, Image img) async {
   List emb = detectFace(interpreter, img);
 
   final tempDir = await getApplicationDocumentsDirectory();
-  String embPath = tempDir!.path + '/emb.json';
+  String embPath = '${tempDir.path}/emb.json';
   File jsonFile = File(embPath);
   var data = {};
 
@@ -48,12 +48,6 @@ Float32List imageToByteListFloat32(
   int pixelIndex = 0;
   for (var i = 0; i < inputSize; i++) {
     for (var j = 0; j < inputSize; j++) {
-      // var pixel = image.getPixel(j, i);
-
-      // buffer[pixelIndex++] = (img.getRed(pixel) - mean) / std;
-      // buffer[pixelIndex++] = (img.getGreen(pixel) - mean) / std;
-      // buffer[pixelIndex++] = (img.getBlue(pixel) - mean) / std;
-
       PixelFloat32.image(image).forEach((element) {
         buffer[pixelIndex++] = (element - mean) / std;
       });
@@ -71,7 +65,7 @@ Future<String> compare(List currEmb) async {
   print("currEmb: $currEmb");
 
   final tempDir = await getApplicationDocumentsDirectory();
-  String embPath = tempDir!.path + '/emb.json';
+  String embPath = '${tempDir.path}/emb.json';
   File jsonFile = File(embPath);
   var data = {};
 

@@ -2,29 +2,6 @@ import 'dart:typed_data';
 import 'package:google_mlkit_commons/google_mlkit_commons.dart';
 import 'package:image/image.dart' as imglib;
 
-Future<imglib.Image> convertInputImageToImage(InputImage inputImage) async {
-  // Ekstrak data gambar mentah
-  Uint8List? bytes = inputImage.bytes;
-  if (bytes == null) {
-    throw Exception('Failed to extract image data.');
-  }
-
-  print("bytes: $bytes");
-
-  // Buat objek Image baru
-  imglib.Image? image = imglib.decodeImage(bytes);
-
-  if (image == null) {
-    throw Exception('Failed to decode image.');
-  }
-
-  // Sekarang Anda bisa menggunakan objek image untuk melakukan berbagai operasi
-  // seperti mengubah ukuran, memotong, atau menyimpan gambar
-  imglib.Image resizedImage = imglib.copyResize(image, width: 200, height: 200);
-
-  return resizedImage;
-}
-
 imglib.Image decodeYUV420SP(InputImage image) {
   final width = image.metadata!.size.width.toInt();
   final height = image.metadata!.size.height.toInt();
