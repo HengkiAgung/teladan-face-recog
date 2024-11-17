@@ -163,6 +163,8 @@ class _RegisterFacePageState extends State<RegisterFacePage> {
         );
 
         croppedImage = imglib.copyResizeCropSquare(croppedImage, size: 112);
+        print("process saving face");
+
         saveEmb('user', interpreter!, croppedImage);
       }
 

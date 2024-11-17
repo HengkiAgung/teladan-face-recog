@@ -127,7 +127,7 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
       return;
     }
 
-    widget.onClockInOut(inputImage, widget.type);
+    // widget.onClockInOut(inputImage, widget.type);
   }
 
   Future<bool> recognizeFace(imglib.Image? image, List<Face> faces) async {
