@@ -4,7 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_html_to_pdf/flutter_html_to_pdf.dart';
+// import 'package:flutter_html_to_pdf/flutter_html_to_pdf.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
@@ -755,15 +755,15 @@ class DetailAssignmentApprovalPageState
 
   convert(String cfData, String name) async {
     // Name is File Name that you want to give the file
-    var targetPath = await _localPath;
-    var targetFileName = name;
+    // var targetPath = await _localPath;
+    // var targetFileName = name;
 
-    var generatedPdfFile = await FlutterHtmlToPdf.convertFromHtmlContent(
-        cfData, targetPath!, targetFileName);
+    // var generatedPdfFile = await FlutterHtmlToPdf.convertFromHtmlContent(
+    //     cfData, targetPath!, targetFileName);
 
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(generatedPdfFile.toString()),
-    ));
+    // ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+    //   content: Text(generatedPdfFile.toString()),
+    // ));
   }
 
   Future<String?> get _localPath async {

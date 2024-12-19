@@ -8,7 +8,8 @@ Future<tfl.Interpreter?> loadModel() async {
     tfl.Interpreter interpreter = await tfl.Interpreter.fromAsset(
         // 'assets/facenet_1.tflite',
         // 'assets/FaceMobileNet_Float32.tflite',
-        'assets/facenet.tflite',
+        // 'assets/facenet.tflite',
+        'assets/facenet_estebanuri.tflite',
         options: tfl.InterpreterOptions());
 
     return interpreter;

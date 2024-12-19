@@ -113,6 +113,8 @@ Future<String> compare(List newEmb) async {
     print("process compare: $currDist" +
         " , threshold: " +
         threshold.toString() +
+        " , lenght: " +
+        currEmb.length.toString() +
         " , Label: " +
         predRes);
   }

@@ -44,8 +44,6 @@ dependencies:
   latlong2: ^0.9.1
   open_street_map_search_and_pick: ^0.1.1
   month_picker_dialog: ^2.4.0
-  flutter_html: ^3.0.0-beta.2
-  flutter_html_to_pdf: ^0.7.0
   locale_plus: ^1.5.0
   google_mlkit_commons: ^0.7.1
   google_mlkit_face_detection: ^0.11.0

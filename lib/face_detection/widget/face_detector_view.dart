@@ -102,15 +102,8 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
       recognizeFace(image, faces);
 
       _customPaint = CustomPaint(painter: painter);
-    } else {
-      String text = 'Faces found: ${faces.length}\n\n';
-      for (final face in faces) {
-        text += 'face: ${face.boundingBox}\n\n';
-      }
-      _text = text;
-      // TODO: set _customPaint to draw boundingRect on top of image
-      _customPaint = null;
     }
+
     _isBusy = false;
     if (mounted) {
       setState(() {});
@@ -127,7 +120,7 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
       return;
     }
 
-    // widget.onClockInOut(inputImage, widget.type);
+    widget.onClockInOut(inputImage, widget.type);
   }
 
   Future<bool> recognizeFace(imglib.Image? image, List<Face> faces) async {
